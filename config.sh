@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REPO=./repo
+REPO=${REPO:-./repo}
 
 repo_sync() {
 	rm -rf .repo/manifest* &&
@@ -74,8 +74,14 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"otoro"|"unagi")
+"otoro"|"unagi"|"keon"|"inari"|"leo"|"hamachi"|"peak")
 	echo DEVICE=$1 >> .tmp-config &&
+	repo_sync $1
+	;;
+
+"tara")
+	echo DEVICE=sp8810ea >> .tmp-config &&
+	echo LUNCH=sp8810eabase-eng >> .tmp-config &&
 	repo_sync $1
 	;;
 
@@ -106,6 +112,12 @@ case "$1" in
 	echo - nexus-s-4g
 	echo - otoro
 	echo - unagi
+	echo - inari
+	echo - keon
+	echo - peak
+	echo - leo
+	echo - hamachi
+	echo - tara
 	echo - pandaboard
 	echo - emulator
 	echo - emulator-x86
