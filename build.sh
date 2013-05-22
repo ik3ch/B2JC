@@ -52,12 +52,19 @@ function configure_device() {
     return $?
 }
 
+function copy_tools() {
+    mkdir -p out/host/linux-x86/framework
+    cp tools/dumpkey.jar out/host/linux-x86/framework/
+    cp tools/signapk.jar out/host/linux-x86/framework/
+}
+
 unset CDPATH
 . setup.sh &&
 if [ -f patches/patch.sh ] ; then
     . patches/patch.sh
 fi &&
 configure_device &&
+copy_tools &&
 time nice -n19 make $MAKE_FLAGS $@
 
 ret=$?
