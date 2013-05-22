@@ -69,6 +69,12 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"nexus-s-ja")
+	echo DEVICE=crespo >> .tmp-config &&
+	echo LUNCH=full_crespo-userdebug >> .tmp-config &&
+	repo_sync $1
+	;;
+
 "nexus-s-4g")
 	echo DEVICE=crespo4g >> .tmp-config &&
 	repo_sync $1
@@ -109,6 +115,7 @@ case "$1" in
 	echo - galaxy-s2
 	echo - galaxy-nexus
 	echo - nexus-s
+	echo - nexus-s-ja
 	echo - nexus-s-4g
 	echo - otoro
 	echo - unagi
