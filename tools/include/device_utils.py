@@ -20,7 +20,7 @@ def remote_shell(cmd):
     adb shell doesn't check the remote command's error code.  So to check this
     ourselves, we echo $? after running the command and then strip that off
     before returning the command's output.
-    
+
     '''
     out = shell(r"""adb shell '%s; echo -n "\n$?"'""" % cmd)
 
@@ -54,6 +54,10 @@ def remote_toolbox_cmd(cmd, args=''):
 
     '''
     return remote_shell('/system/bin/toolbox "%s" %s' % (cmd, args))
+
+def remote_ls(dir):
+    '''Run ls on the remote device, and return a set containing the results.'''
+    return {f.strip() for f in remote_toolbox_cmd('ls', dir).split('\n')}
 
 def shell(cmd, cwd=None, show_errors=True):
     '''Run the given command as a shell script on the host machine.
@@ -156,18 +160,30 @@ def run_and_delete_dir_on_exception(fun, dir):
         # Raise the original exception.
         raise exception_info[1], None, exception_info[2]
 
-def send_signal_and_pull_files(signal,
-                              outfiles_prefixes,
-                              remove_outfiles_from_device,
-                              out_dir,
-                              optional_outfiles_prefixes=[]):
-    '''Send a signal to the main B2G process and pull files created as a
-    result.
+def notify_and_pull_files(outfiles_prefixes,
+                          remove_outfiles_from_device,
+                          out_dir,
+                          optional_outfiles_prefixes=[],
+                          fifo_msg=None,
+                          signal=None):
+    '''Send a message to the main B2G process (either by sending it a signal or
+    by writing to a fifo that it monitors) and pull files created as a result.
 
-    We send the given signal (which may be either a number of a string of the
-    form 'SIGRTn', which we interpret as the signal SIGRTMIN + n) and pull the
-    files generated into out_dir on the host machine.  We only pull files
-    which were created after the signal was sent.
+    Exactly one of fifo_msg or signal must be non-null; otherwise, we throw
+    an exception.
+
+    If fifo_msg is non-null, we write fifo_msg to
+    /data/local/debug_info_trigger.  When this comment was written, B2G
+    understood the messages 'memory report', 'minimize memory report', and 'gc
+    log'.  See nsMemoryInfoDumper.cpp's FifoWatcher.
+
+    If signal is non-null, we send the given signal (which may be either a
+    number or a string of the form 'SIGRTn', which we interpret as the signal
+    SIGRTMIN + n).
+
+    After writing to the fifo or sending the signal, we pull the files
+    generated into out_dir on the host machine.  We only pull files which were
+    created after the signal was sent.
 
     When we're done, we remove the files from the device if
     remote_outfiles_from_device is true.
@@ -182,9 +198,18 @@ def send_signal_and_pull_files(signal,
     optional_outfiles_prefixes.
 
     '''
+
+    if (fifo_msg == None) == (signal == None):
+        raise ValueError("Exactly one of the fifo_msg and "
+                         "signal kw args must be non-null.")
+
     (master_pid, child_pids) = get_remote_b2g_pids()
     old_files = _list_remote_temp_files(outfiles_prefixes)
-    _send_remote_signal(signal, master_pid)
+
+    if signal != None:
+        _send_remote_signal(signal, master_pid)
+    else:
+        _write_to_remote_file('/data/local/debug_info_trigger', fifo_msg)
 
     all_outfiles_prefixes = outfiles_prefixes + optional_outfiles_prefixes
 
@@ -194,6 +219,7 @@ def send_signal_and_pull_files(signal,
     if remove_outfiles_from_device:
         _remove_files_from_device(all_outfiles_prefixes, old_files)
     return [os.path.basename(f) for f in new_files]
+
 
 # You probably don't need to call the functions below from outside this module,
 # but hey, maybe you do.
@@ -209,13 +235,31 @@ def _send_remote_signal(signal, pid):
     # accepts signals above 31.  It also understands "SIGRTn" per above.
     remote_shell("killer %s %d" % (signal, pid))
 
+def _write_to_remote_file(file, msg):
+    '''Write a message to a file on the device.
+
+    Note that echo is a shell built-in, so we use remote_shell, not
+    remote_toolbox_cmd, here.
+
+    Also, due to ghetto string escaping in remote_shell, we must use " and not
+    ' in this command.
+
+    '''
+    remote_shell('echo -n "%s" > "%s"' % (msg, file))
+
 def _list_remote_temp_files(prefixes):
     '''Return a set of absolute filenames in the device's temp directory which
     start with one of the given prefixes.'''
 
-    return set(['/data/local/tmp/' + f.strip() for f in
-                remote_toolbox_cmd('ls', '/data/local/tmp').split('\n')
-                if any([f.strip().startswith(prefix) for prefix in prefixes])])
+    tmpdir = '/data/local/tmp/'
+    outdir = os.path.join(tmpdir, 'memory-reports')
+
+    # Check that outdir exists.  If not, return the empty set.
+    if 'memory-reports' not in remote_ls(tmpdir):
+        return set()
+
+    return {os.path.join(outdir, f) for f in remote_ls(outdir)
+            if any(f.startswith(prefix) for prefix in prefixes)}
 
 def _wait_for_remote_files(outfiles_prefixes, num_expected_files, old_files):
     '''Wait for files to appear on the remote device.
