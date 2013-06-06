@@ -1,11 +1,12 @@
 #!/bin/bash
 
 REPO=${REPO:-./repo}
+sync_flags=""
 
 repo_sync() {
 	rm -rf .repo/manifest* &&
 	$REPO init -u $GITREPO -b $BRANCH -m $1.xml &&
-	$REPO sync
+	$REPO sync $sync_flags
 	ret=$?
 	if [ "$GITREPO" = "$GIT_TEMP_REPO" ]; then
 		rm -rf $GIT_TEMP_REPO
@@ -18,7 +19,8 @@ repo_sync() {
 
 case `uname` in
 "Darwin")
-	CORE_COUNT=`system_profiler SPHardwareDataType | grep "Cores:" | sed -e 's/[ a-zA-Z:]*\([0-9]*\)/\1/'`
+	# Should also work on other BSDs
+	CORE_COUNT=`sysctl -n hw.ncpu`
 	;;
 "Linux")
 	CORE_COUNT=`grep processor /proc/cpuinfo | wc -l`
@@ -30,6 +32,26 @@ esac
 
 GITREPO=${GITREPO:-"git://github.com/sola-dolphin1/b2g-manifest"}
 BRANCH=${BRANCH:-v1-train}
+
+while [ $# -ge 1 ]; do
+	case $1 in
+	-d|-l|-f|-n|-c|-q)
+		sync_flags="$sync_flags $1"
+		shift
+		;;
+	--help|-h)
+		# The main case statement will give a usage message.
+		break
+		;;
+	-*)
+		echo "$0: unrecognized option $1" >&2
+		exit 1
+		;;
+	*)
+		break
+		;;
+	esac
+done
 
 GIT_TEMP_REPO="tmp_manifest_repo"
 if [ -n "$2" ]; then
@@ -121,7 +143,8 @@ case "$1" in
 	;;
 
 *)
-	echo Usage: $0 \(device name\)
+	echo "Usage: $0 [-cdflnq] (device name)"
+	echo "Flags are passed through to |./repo sync|."
 	echo
 	echo Valid devices to configure are:
 	echo - galaxy-s2
