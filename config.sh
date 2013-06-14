@@ -113,6 +113,12 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"keon-jc-ja")
+	echo DEVICE=keon >> .tmp-config &&
+	echo LUNCH=full_keon-userdebug >> .tmp-config &&
+	repo_sync $1
+	;;
+
 "peak-ja")
 	echo DEVICE=peak >> .tmp-config &&
 	echo LUNCH=full_peak-userdebug >> .tmp-config &&
@@ -157,6 +163,7 @@ case "$1" in
 	echo - inari
 	echo - keon
 	echo - keon-ja
+	echo - keon-jc-ja
 	echo - peak
 	echo - peak-ja
 	echo - leo
