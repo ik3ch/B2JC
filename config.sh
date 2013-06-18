@@ -81,6 +81,18 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"galaxy-nexus-ja")
+	echo DEVICE=maguro >> .tmp-config &&
+	echo LUNCH=full_maguro-userdebug >> .tmp-config &&
+	repo_sync $1
+	;;
+
+"galaxy-nexus-jc")
+	echo DEVICE=maguro >> .tmp-config &&
+	echo LUNCH=full_maguro-userdebug >> .tmp-config &&
+	repo_sync $1
+	;;
+
 "optimus-l5")
 	echo DEVICE=m4 >> .tmp-config &&
 	repo_sync $1
@@ -167,6 +179,8 @@ case "$1" in
 	echo Valid devices to configure are:
 	echo - galaxy-s2
 	echo - galaxy-nexus
+	echo - galaxy-nexus-ja
+	echo - galaxy-nexus-jc
 	echo - nexus-s
 	echo - nexus-s-ja
 	echo - nexus-s-jc
