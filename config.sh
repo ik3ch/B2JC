@@ -83,13 +83,13 @@ case "$1" in
 
 "galaxy-nexus-ja")
 	echo DEVICE=maguro >> .tmp-config &&
-	echo LUNCH=full_maguro-userdebug >> .tmp-config &&
+	echo LUNCH=full_maguro-eng >> .tmp-config &&
 	repo_sync $1
 	;;
 
 "galaxy-nexus-jc")
 	echo DEVICE=maguro >> .tmp-config &&
-	echo LUNCH=full_maguro-userdebug >> .tmp-config &&
+	echo LUNCH=full_maguro-eng >> .tmp-config &&
 	repo_sync $1
 	;;
 
