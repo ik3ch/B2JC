@@ -26,6 +26,8 @@ import subprocess
 import include.device_utils as utils
 
 def compress_logs(log_filenames, out_dir):
+    print('Compressing logs...')
+
     # Compress with xz if we can; otherwise, use gzip.
     try:
         utils.shell('xz -V', show_errors=False)
@@ -60,21 +62,30 @@ def compress_logs(log_filenames, out_dir):
             raise subprocess.CalledProcessError(proc.returncode,
                                                 [compression_prog, filename],
                                                 None)
-def get_logs(args):
-    if args.output_directory:
-        out_dir = utils.create_specific_output_dir(args.output_directory)
+
+def get_logs(args, out_dir=None, get_procrank_etc=True):
+    if not out_dir:
+        if args.output_directory:
+            out_dir = utils.create_specific_output_dir(args.output_directory)
+        else:
+            out_dir = utils.create_new_output_dir('gc-cc-logs-')
+
+    if args.abbreviated_gc_cc_log:
+        fifo_msg='abbreviated gc log'
     else:
-        out_dir = utils.create_new_output_dir('gc-cc-logs-')
+        fifo_msg='gc log'
 
     def do_work():
-        log_filenames = utils.send_signal_and_pull_files(
-            signal='SIGRT2',
+        log_filenames = utils.notify_and_pull_files(
+            fifo_msg=fifo_msg,
             outfiles_prefixes=['cc-edges.', 'gc-edges.'],
             remove_outfiles_from_device=not args.leave_on_device,
             out_dir=out_dir)
 
+        if get_procrank_etc:
+            utils.pull_procrank_etc(out_dir)
+
         compress_logs(log_filenames, out_dir)
-        utils.pull_procrank_etc(out_dir)
 
     utils.run_and_delete_dir_on_exception(do_work, out_dir)
 
@@ -94,6 +105,14 @@ if __name__ == '__main__':
             Leave the logs on the device after pulling them.  (Note: These logs
             can take up tens of megabytes and are stored uncompressed on the
             device!)'''))
+
+    parser.add_argument('--abbreviated', dest='abbreviated_gc_cc_log',
+        action='store_true', default=False,
+        help=textwrap.dedent('''\
+            Get an abbreviated CC log instead of a full (i.e., all-traces) log.
+            An abbreviated log doesn't trace through objects that the cycle
+            collector knows must be reachable (e.g. DOM nodes whose window is
+            alive).'''))
 
     args = parser.parse_args()
     get_logs(args)
