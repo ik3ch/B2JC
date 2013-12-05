@@ -98,6 +98,11 @@ case "$1" in
 	repo_sync nexus-4
 	;;
 
+"celox")
+	echo DEVICE=celox >> .tmp-config &&
+	repo_sync $1
+	;;
+
 "optimus-l5")
 	echo DEVICE=m4 >> .tmp-config &&
 	repo_sync $1
@@ -187,6 +192,7 @@ case "$1" in
 	echo - galaxy-nexus-ja
 	echo - galaxy-nexus-jc
 	echo - nexus-4
+	echo - celox
 	echo - nexus-s
 	echo - nexus-s-ja
 	echo - nexus-s-jc
